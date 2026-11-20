@@ -5,7 +5,8 @@
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { cpSync, existsSync, mkdirSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -17,5 +18,12 @@ if (!existsSync(source)) {
 }
 const destDir = process.env.MAKEFUN_OUTPUT_DIR ?? "/output";
 mkdirSync(destDir, { recursive: true });
-cpSync(source, join(destDir, "entry.png"));
-console.log("wrote " + join(destDir, "entry.png"));
+const dest = join(destDir, "entry.png");
+cpSync(source, dest);
+// Verify the copy is byte-identical before reporting success.
+const digest = (p) => createHash("sha256").update(readFileSync(p)).digest("hex");
+if (digest(source) !== digest(dest)) {
+  console.error("entry.png copy failed integrity check");
+  process.exit(1);
+}
+console.log("wrote " + dest + " sha256:" + digest(dest));
